@@ -1,0 +1,115 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using System.Text;
+using System;
+using UnityEngine.UI;
+
+public class Motor : MonoBehaviour 
+{
+    Thread receiveThread;
+    UdpClient client;
+    int port;
+
+    float x = 0;
+
+    [SerializeField]
+    float magnitud = 5f, magnitudRot = 5f;
+
+    [SerializeField]
+    AudioClip idle, driving;
+
+    AudioSource mAudio;
+
+   
+
+
+    // Use this for initialization
+    void Start ()
+    {
+        port = 3004;
+        Initialzation();
+
+        mAudio = GetComponent<AudioSource>();
+       
+	}
+    void Initialzation()
+    {
+        
+        receiveThread = new Thread(new ThreadStart(Receive));
+        receiveThread.IsBackground = true;
+        receiveThread.Start();
+    }
+    void Receive()
+    {
+        client = new UdpClient(port);
+
+        while (true)
+        {
+            try
+            {
+                IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse("0.0.0.0"), port);
+                byte[] data = client.Receive(ref anyIP);
+                string text = Encoding.UTF8.GetString(data);
+
+                x = float.Parse(text);
+
+                Debug.Log(x);
+            }
+            catch (Exception e)
+            {
+                print(e.ToString());
+            }
+        }
+    }
+    
+
+    // Update is called once per frame
+    void Update ()
+    {
+
+        
+        Vector3 dirRot = new Vector3(0, 1, 0);
+        float senRot = Input.GetAxis("Horizontal");
+        Vector3 velRot = magnitudRot * dirRot * senRot;
+
+        Vector3 dirZ = transform.forward;
+        float senZ = Input.GetAxis("Vertical");
+        Vector3 velZ = magnitud * dirZ * senZ;
+
+        Vector3 distancia = ( velZ) * Time.deltaTime;
+        transform.position += distancia;
+
+        Vector3 distanciaRot = velRot * Time.deltaTime;
+        transform.eulerAngles += velRot;
+
+
+        
+       
+
+        if (senZ == 0 && senRot == 0)
+        {
+            mAudio.clip = idle;
+            
+            if (mAudio.isPlaying == false) mAudio.Play();
+
+        }
+
+        else
+        {
+            mAudio.clip = driving;
+            
+            if (mAudio.isPlaying == false) mAudio.Play();
+        }
+
+
+        
+
+        
+
+    }
+   
+}
